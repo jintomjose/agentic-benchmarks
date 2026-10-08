@@ -1,0 +1,12 @@
+# Put this file in the root of your product repo (GitHub or Azure Repos).
+# Generate a starting point with:  agentic-benchmark discover --org <url> --project <name> --area-path <path>
+[product]
+name = "Mortgage onboarding"
+org = "https://dev.azure.com/<your-org>"
+project = "<ado-project>"
+area_path = "<ado-project>\\Mortgages"             # your team's slice of a shared project
+work_item_types = ["User Story", "Bug"]
+estimate = "points"                                 # points | hours | count
+done_states = ["Closed", "Resolved"]
+agentic_rule = { type = "tag", value = "Agentic" }  # how the team marks agent-built work
+run_start = "2026-11-02"                            # day the agentic SDLC started for this team

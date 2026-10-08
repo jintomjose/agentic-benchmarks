@@ -1,0 +1,61 @@
+id,title,type,state,points,agentic,created,delivered,planned_sprint,planned_start,planned_finish
+X-1,Synthetic story 1,Story,To Do,3,True,2026-08-18T00:00:00Z,,Sprint 1,2026-09-07,2026-09-20
+X-2,Synthetic story 2,Story,Done,1,True,2026-08-18T00:00:00Z,2026-09-18T20:42Z,Sprint 1,2026-09-07,2026-09-20
+X-3,Synthetic story 3,Story,To Do,1,True,2026-08-18T00:00:00Z,,Sprint 1,2026-09-07,2026-09-20
+X-4,Synthetic story 4,Story,Done,1,True,2026-08-18T00:00:00Z,2026-09-14T23:02Z,Sprint 1,2026-09-07,2026-09-20
+X-5,Synthetic story 5,Story,Done,5,False,2026-08-18T00:00:00Z,2026-09-19T02:39Z,Sprint 1,2026-09-07,2026-09-20
+X-6,Synthetic story 6,Story,To Do,8,True,2026-08-18T00:00:00Z,,Sprint 1,2026-09-07,2026-09-20
+X-7,Synthetic story 7,Story,Done,5,True,2026-08-18T00:00:00Z,2026-09-16T05:26Z,Sprint 1,2026-09-07,2026-09-20
+X-8,Synthetic story 8,Story,Done,2,True,2026-08-18T00:00:00Z,2026-09-15T13:59Z,Sprint 1,2026-09-07,2026-09-20
+X-9,Synthetic story 9,Story,To Do,3,True,2026-08-18T00:00:00Z,,Sprint 1,2026-09-07,2026-09-20
+X-10,Synthetic story 10,Story,To Do,1,True,2026-08-18T00:00:00Z,,Sprint 1,2026-09-07,2026-09-20
+X-11,Synthetic story 11,Story,Done,3,True,2026-08-18T00:00:00Z,2026-09-20T08:08Z,Sprint 2,2026-09-21,2026-10-04
+X-12,Synthetic story 12,Story,Done,8,True,2026-08-18T00:00:00Z,2026-09-20T01:45Z,Sprint 2,2026-09-21,2026-10-04
+X-13,Synthetic story 13,Story,Done,3,True,2026-08-18T00:00:00Z,2026-09-22T02:36Z,Sprint 2,2026-09-21,2026-10-04
+X-14,Synthetic story 14,Story,To Do,2,True,2026-08-18T00:00:00Z,,Sprint 2,2026-09-21,2026-10-04
+X-15,Synthetic story 15,Story,Done,2,True,2026-08-18T00:00:00Z,2026-09-16T21:21Z,Sprint 2,2026-09-21,2026-10-04
+X-16,Synthetic story 16,Story,To Do,3,True,2026-08-18T00:00:00Z,,Sprint 2,2026-09-21,2026-10-04
+X-17,Synthetic story 17,Story,Done,1,True,2026-08-18T00:00:00Z,2026-09-17T21:02Z,Sprint 2,2026-09-21,2026-10-04
+X-18,Synthetic story 18,Story,To Do,2,True,2026-08-18T00:00:00Z,,Sprint 2,2026-09-21,2026-10-04
+X-19,Synthetic story 19,Story,To Do,1,True,2026-08-18T00:00:00Z,,Sprint 2,2026-09-21,2026-10-04
+X-20,Synthetic story 20,Story,Done,3,True,2026-08-18T00:00:00Z,2026-09-17T07:23Z,Sprint 2,2026-09-21,2026-10-04
+X-21,Synthetic story 21,Story,Done,5,True,2026-08-18T00:00:00Z,2026-09-15T03:48Z,Sprint 3,2026-10-05,2026-10-18
+X-22,Synthetic story 22,Story,Done,1,True,2026-08-18T00:00:00Z,2026-09-20T05:59Z,Sprint 3,2026-10-05,2026-10-18
+X-23,Synthetic story 23,Story,Done,5,True,2026-08-18T00:00:00Z,2026-09-17T14:32Z,Sprint 3,2026-10-05,2026-10-18
+X-24,Synthetic story 24,Story,To Do,1,True,2026-08-18T00:00:00Z,,Sprint 3,2026-10-05,2026-10-18
+X-25,Synthetic story 25,Story,Done,8,True,2026-08-18T00:00:00Z,2026-09-14T20:50Z,Sprint 3,2026-10-05,2026-10-18
+X-26,Synthetic story 26,Story,To Do,2,True,2026-08-18T00:00:00Z,,Sprint 3,2026-10-05,2026-10-18
+X-27,Synthetic story 27,Story,Done,5,True,2026-08-18T00:00:00Z,2026-09-18T03:17Z,Sprint 3,2026-10-05,2026-10-18
+X-28,Synthetic story 28,Story,To Do,2,False,2026-08-18T00:00:00Z,,Sprint 3,2026-10-05,2026-10-18
+X-29,Synthetic story 29,Story,To Do,3,False,2026-08-18T00:00:00Z,,Sprint 3,2026-10-05,2026-10-18
+X-30,Synthetic story 30,Story,To Do,5,True,2026-08-18T00:00:00Z,,Sprint 3,2026-10-05,2026-10-18
+X-31,Synthetic story 31,Story,Done,2,True,2026-08-18T00:00:00Z,2026-09-19T21:21Z,Sprint 4,2026-10-19,2026-11-01
+X-32,Synthetic story 32,Story,Done,8,True,2026-08-18T00:00:00Z,2026-09-16T17:40Z,Sprint 4,2026-10-19,2026-11-01
+X-33,Synthetic story 33,Story,Done,8,False,2026-08-18T00:00:00Z,2026-09-19T02:50Z,Sprint 4,2026-10-19,2026-11-01
+X-34,Synthetic story 34,Story,To Do,8,True,2026-08-18T00:00:00Z,,Sprint 4,2026-10-19,2026-11-01
+X-35,Synthetic story 35,Story,Done,1,False,2026-08-18T00:00:00Z,2026-09-21T16:04Z,Sprint 4,2026-10-19,2026-11-01
+X-36,Synthetic story 36,Story,Done,8,True,2026-08-18T00:00:00Z,2026-09-17T17:11Z,Sprint 4,2026-10-19,2026-11-01
+X-37,Synthetic story 37,Story,Done,5,True,2026-08-18T00:00:00Z,2026-09-14T22:32Z,Sprint 4,2026-10-19,2026-11-01
+X-38,Synthetic story 38,Story,Done,2,True,2026-08-18T00:00:00Z,2026-09-19T09:44Z,Sprint 4,2026-10-19,2026-11-01
+X-39,Synthetic story 39,Story,Done,8,True,2026-08-18T00:00:00Z,2026-09-15T05:23Z,Sprint 4,2026-10-19,2026-11-01
+X-40,Synthetic story 40,Story,Done,1,True,2026-08-18T00:00:00Z,2026-09-16T02:47Z,Sprint 4,2026-10-19,2026-11-01
+X-41,Synthetic story 41,Story,To Do,3,True,2026-08-18T00:00:00Z,,Sprint 5,2026-11-02,2026-11-15
+X-42,Synthetic story 42,Story,Done,5,False,2026-08-18T00:00:00Z,2026-09-21T11:38Z,Sprint 5,2026-11-02,2026-11-15
+X-43,Synthetic story 43,Story,Done,5,True,2026-08-18T00:00:00Z,2026-09-16T23:40Z,Sprint 5,2026-11-02,2026-11-15
+X-44,Synthetic story 44,Story,To Do,3,True,2026-08-18T00:00:00Z,,Sprint 5,2026-11-02,2026-11-15
+X-45,Synthetic story 45,Story,Done,2,False,2026-08-18T00:00:00Z,2026-09-16T02:14Z,Sprint 5,2026-11-02,2026-11-15
+X-46,Synthetic story 46,Story,Done,3,True,2026-08-18T00:00:00Z,2026-09-18T22:10Z,Sprint 5,2026-11-02,2026-11-15
+X-47,Synthetic story 47,Story,Done,8,True,2026-08-18T00:00:00Z,2026-09-19T18:13Z,Sprint 5,2026-11-02,2026-11-15
+X-48,Synthetic story 48,Story,Done,3,True,2026-08-18T00:00:00Z,2026-09-21T23:33Z,Sprint 5,2026-11-02,2026-11-15
+X-49,Synthetic story 49,Story,Done,2,True,2026-08-18T00:00:00Z,2026-09-20T21:35Z,Sprint 5,2026-11-02,2026-11-15
+X-50,Synthetic story 50,Story,To Do,2,True,2026-08-18T00:00:00Z,,Sprint 5,2026-11-02,2026-11-15
+X-51,Synthetic story 51,Story,To Do,2,True,2026-08-18T00:00:00Z,,Sprint 6,2026-11-16,2026-11-29
+X-52,Synthetic story 52,Story,Done,2,True,2026-08-18T00:00:00Z,2026-09-18T12:02Z,Sprint 6,2026-11-16,2026-11-29
+X-53,Synthetic story 53,Story,To Do,1,True,2026-08-18T00:00:00Z,,Sprint 6,2026-11-16,2026-11-29
+X-54,Synthetic story 54,Story,To Do,2,False,2026-08-18T00:00:00Z,,Sprint 6,2026-11-16,2026-11-29
+X-55,Synthetic story 55,Story,To Do,5,True,2026-08-18T00:00:00Z,,Sprint 6,2026-11-16,2026-11-29
+X-56,Synthetic story 56,Story,To Do,3,True,2026-08-18T00:00:00Z,,Sprint 6,2026-11-16,2026-11-29
+X-57,Synthetic story 57,Story,Done,2,True,2026-08-18T00:00:00Z,2026-09-18T07:29Z,Sprint 6,2026-11-16,2026-11-29
+X-58,Synthetic story 58,Story,To Do,5,False,2026-08-18T00:00:00Z,,Sprint 6,2026-11-16,2026-11-29
+X-59,Synthetic story 59,Story,Done,1,True,2026-08-18T00:00:00Z,2026-09-19T20:14Z,Sprint 6,2026-11-16,2026-11-29
+X-60,Synthetic story 60,Story,To Do,1,True,2026-08-18T00:00:00Z,,Sprint 6,2026-11-16,2026-11-29

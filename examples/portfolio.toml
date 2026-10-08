@@ -1,0 +1,43 @@
+# Central portfolio config: one [[product]] block per digital product.
+# [defaults] apply to every product unless the product overrides them.
+# Teams can instead keep a single [product] block in .agentic-benchmark.toml in their own repo
+# (see examples/team-repo/), which the admin picks up with --repo or --github-org.
+
+[defaults]
+transport = "auto"                    # auto | az (existing az login, SSO) | rest (ADO_PAT / ADO_TOKEN)
+work_item_types = ["Product Backlog Item", "User Story", "Requirement", "Bug"]
+estimate = "points"                   # points | hours (OriginalEstimate) | count (throughput)
+points_field = "auto"                 # or Microsoft.VSTS.Scheduling.StoryPoints / .Effort / .Size
+unestimated = "exclude"               # or "median": fill gaps with the team median
+velocity = "auto"                     # from the last velocity_sprints finished sprints, or a number
+done_states = ["Done", "Closed", "Resolved"]
+removed_states = ["Removed"]
+agentic_rule = { type = "tag", value = "Agentic" }   # or type = "area_path" / "field" (see README)
+plan_baseline = "first_assignment"    # retro only: or a date "YYYY-MM-DD"
+backfill_minutes = 60                 # done within this many minutes of creation = logged after the fact
+exclude_backfilled = true
+timezone = "Europe/Amsterdam"
+
+# --- Azure DevOps product (replace org/project with your own) ---
+# [[product]]
+# name = "Mortgage onboarding"
+# org = "https://dev.azure.com/<your-org>"
+# project = "<project>"
+# area_path = "<project>\\Mortgages"  # optional: one team/area inside a shared project
+# run_start = "2026-09-01"            # day the agentic delivery run began
+# baseline = "baselines/mortgage-onboarding/2026-08-31.json"   # optional: pin the baseline
+
+# --- Any other tracker (e.g. Jira) via a normalised CSV export ---
+[[product]]
+name = "Synthetic product A"
+source = "csv"
+csv_path = "examples/synthetic_product_a.csv"
+run_start = "2026-09-14"
+as_of = "2026-10-08"
+
+[[product]]
+name = "Synthetic product B"
+source = "csv"
+csv_path = "examples/synthetic_product_b.csv"
+run_start = "2026-09-21"
+as_of = "2026-10-08"

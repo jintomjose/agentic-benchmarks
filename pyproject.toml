@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentic-benchmark"
+version = "0.2.0"
+description = "Compare a product's planned delivery (ADO estimates and sprints) with its agentic delivery: calendar ×-speed"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["matplotlib>=3.8"]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[project.scripts]
+agentic-benchmark = "agentic_benchmark.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

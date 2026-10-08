@@ -1,0 +1,47 @@
+# Central run across every repo that carries .agentic-benchmark.toml.
+# compare: weekly + on demand, results as a build artifact.
+# baseline: on demand; new baseline files arrive as a pull request so a human reviews each frozen plan.
+name: agentic-benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: baseline or compare
+        type: choice
+        options: [compare, baseline]
+        default: compare
+  schedule:
+    - cron: "0 6 * * 1"   # Mondays 06:00 UTC: compare
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      ADO_PAT: ${{ secrets.ADO_PAT }}                # Work Items: Read on every ADO org in scope
+      GH_TOKEN: ${{ secrets.CONFIG_READ_TOKEN }}      # read access to the product repos
+      GITHUB_ORG: ${{ vars.PRODUCT_GITHUB_ORG }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install .
+      - name: Run
+        run: agentic-benchmark "${{ inputs.command || 'compare' }}" --github-org "$GITHUB_ORG" --out out
+      - name: Propose new baselines
+        if: ${{ inputs.command == 'baseline' }}
+        uses: peter-evans/create-pull-request@v6
+        with:
+          add-paths: baselines/**
+          branch: baseline/${{ github.run_id }}
+          title: "New delivery baselines"
+          body: "Frozen plans from `agentic-benchmark baseline`. Review scope and dates before merging."
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agentic-benchmark-${{ github.run_id }}
+          path: out/
+          retention-days: 90
