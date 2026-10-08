@@ -74,11 +74,13 @@ agentic-benchmark compare  --github-org my-org --out out/2026-12
 agentic-benchmark compare  --config examples/portfolio.toml    # or keep one central portfolio file
 ```
 
-`.github/workflows/benchmark.yml` runs `compare` every Monday and uploads the reports as a build artifact. Running `baseline` on demand opens a pull request with the new baseline files, so a person reviews each frozen plan. Set these up first:
+`.github/workflows/benchmark.yml` runs `compare` every day at 06:00 UTC and uploads the reports as a build artifact. Running `baseline` on demand opens a pull request with the new baseline files, so a person reviews each frozen plan. Set these up first:
 
 - secret `ADO_PAT`
 - secret `CONFIG_READ_TOKEN`, with read access to the product repos
 - variable `PRODUCT_GITHUB_ORG`
+
+If you **fork** rather than import this repo, GitHub keeps scheduled workflows off in forks: enable them in the Actions tab. The upstream repo skips scheduled runs on purpose.
 
 Repos in Azure Repos: list them in a central `portfolio.toml`. Reading config straight from Azure Repos isn't supported yet.
 

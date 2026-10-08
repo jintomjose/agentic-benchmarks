@@ -1,5 +1,5 @@
 # Central run across every repo that carries .agentic-benchmark.toml.
-# compare: weekly + on demand, results as a build artifact.
+# compare: daily + on demand, results as a build artifact.
 # baseline: on demand; new baseline files arrive as a pull request so a human reviews each frozen plan.
 name: agentic-benchmark
 
@@ -12,7 +12,7 @@ on:
         options: [compare, baseline]
         default: compare
   schedule:
-    - cron: "0 6 * * 1"   # Mondays 06:00 UTC: compare
+    - cron: "0 6 * * *"   # every day 06:00 UTC: compare
 
 permissions:
   contents: write
@@ -20,6 +20,9 @@ permissions:
 
 jobs:
   run:
+    # Scheduled runs are for repos that import this code. The upstream template repo has no
+    # ADO credentials, so it skips them (manual runs still work).
+    if: ${{ github.event_name != 'schedule' || github.repository != 'jintomjose/agentic-benchmarks' }}
     runs-on: ubuntu-latest
     env:
       ADO_PAT: ${{ secrets.ADO_PAT }}                # Work Items: Read on every ADO org in scope
