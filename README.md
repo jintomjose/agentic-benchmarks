@@ -9,6 +9,8 @@ It is built for two kinds of user:
 - **Product teams** add one config file to their repo and run it themselves.
 - **A central admin engineer** runs it across every repo they can access (GitHub or Azure Repos) from one place, or on a schedule with GitHub Actions.
 
+> **New here? Start with [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md).** It has a 5-minute demo that needs no Azure DevOps access, step-by-step paths for a product team and for a central admin, sample output, and troubleshooting.
+
 ```mermaid
 flowchart LR
     subgraph Repos["Product repos (GitHub / Azure Repos)"]
@@ -41,48 +43,49 @@ flowchart LR
 
 ## Install
 
-Requirements: Python 3.11 or later, plus **either** the Azure CLI with the devops extension (`az extension add -n azure-devops`, then `az login`) **or** an `ADO_PAT` with *Work Items: Read*. For `--repo` / `--github-org`, you also need the GitHub CLI (`gh auth login`).
+Requirements:
+- Python 3.11 or later.
+- **Either** the Azure CLI (`az extension add -n azure-devops`, then `az login`) **or** an `ADO_PAT` with *Work Items: Read*.
+- For `--repo` / `--github-org`, the GitHub CLI (`gh auth login`).
 
 ```bash
-git clone <this-repo> && cd agentic-benchmarks
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e ".[test]"
-pytest -q                       # offline tests, no ADO access needed
+# use the tool from your own product repo
+pip install "git+https://github.com/jintomjose/agentic-benchmarks.git"
+
+# or work on the tool itself
+git clone https://github.com/jintomjose/agentic-benchmarks.git && cd agentic-benchmarks
+python3 -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\Activate.ps1
+pip install -e ".[test]" && pytest -q
+agentic-benchmark retro --config examples/portfolio.toml --out out/demo   # offline demo
 ```
 
 ## Quick start: one team
 
+Run these from your product repo. The full walkthrough is in [GETTING_STARTED.md, section B](docs/GETTING_STARTED.md#b-product-team-measure-your-own-product).
+
 ```bash
-# 1. Inspect your ADO project and generate a config
-agentic-benchmark discover --org https://dev.azure.com/<org> --project <project> --area-path "<project>\\<team>"
-#    paste the output into .agentic-benchmark.toml at your repo root (see examples/team-repo/)
+# 1. Inspect your ADO project; paste the suggested config into .agentic-benchmark.toml
+agentic-benchmark discover --org https://dev.azure.com/<org> --project <project> --area-path "<project>\<team>"
 
-# 2. Before agents start: freeze the plan
+# 2. Before agents start: freeze the plan, then commit baselines/<product>/<date>.json
 agentic-benchmark baseline --config .agentic-benchmark.toml
-#    commit baselines/<product>/<date>.json
 
-# 3. Weeks later: measure
+# 3. Any time later: measure
 agentic-benchmark compare --config .agentic-benchmark.toml
 ```
 
 ## Quick start: central admin across many repos
 
+The full walkthrough, including GitHub Actions setup, is in [GETTING_STARTED.md, section C](docs/GETTING_STARTED.md#c-central-admin-many-products).
+
 ```bash
 agentic-benchmark discover --repo my-org/mortgage-app          # check one team's config against ADO
 agentic-benchmark baseline --github-org my-org                 # every repo carrying .agentic-benchmark.toml
 agentic-benchmark compare  --github-org my-org --out out/2026-12
-agentic-benchmark compare  --config examples/portfolio.toml    # or keep one central portfolio file
+agentic-benchmark compare  --config portfolio.toml             # or one central file (see examples/portfolio.toml)
 ```
 
-`.github/workflows/benchmark.yml` runs `compare` every day at 06:00 UTC and uploads the reports as a build artifact. Running `baseline` on demand opens a pull request with the new baseline files, so a person reviews each frozen plan. Set these up first:
-
-- secret `ADO_PAT`
-- secret `CONFIG_READ_TOKEN`, with read access to the product repos
-- variable `PRODUCT_GITHUB_ORG`
-
-If you **fork** rather than import this repo, GitHub keeps scheduled workflows off in forks: enable them in the Actions tab. The upstream repo skips scheduled runs on purpose.
-
-Repos in Azure Repos: list them in a central `portfolio.toml`. Reading config straight from Azure Repos isn't supported yet.
+`.github/workflows/benchmark.yml` runs `compare` every day at 06:00 UTC once you've set the secrets `ADO_PAT` and `CONFIG_READ_TOKEN` and the variable `PRODUCT_GITHUB_ORG`. Running `baseline` on demand opens a pull request with the new baselines. Forks keep scheduled workflows off until you enable them in the Actions tab, and the upstream repo skips scheduled runs on purpose. For products in Azure Repos, list them in a central `portfolio.toml`.
 
 ## Configuration
 
