@@ -41,6 +41,62 @@ flowchart LR
 | Any time **after** (T1…Tn) | `compare` | For baseline items delivered since T0: planned days vs actual days = **×-speed**, the agentic share of the delivered work, and a projection for the full baseline scope at the current pace |
 | No baseline was taken | `retro` | The original plan rebuilt from revision history (the first sprint each item was given). This is the less robust method; use `baseline` whenever you can |
 
+## Features and measures at a glance
+
+**Commands**
+
+| Feature | What it does |
+|---|---|
+| `discover` | Inspects an ADO project or area: types, states, which estimate field is filled, area paths, tags. Prints a ready-to-paste config |
+| `baseline` | Freezes the current plan into `baselines/<product>/<date>.json`: open scope, estimates, team-assigned sprints, and a velocity forecast for unscheduled items |
+| `compare` | Measures baseline scope delivered since the baseline against when that baseline planned it, with a weekly trend rebuilt from ADO history |
+| `retro` | Rebuilds the original plan from revision history when no baseline was taken |
+
+**Setup and robustness**
+
+| Feature | What it does |
+|---|---|
+| Multi-product | One central `portfolio.toml`, `.agentic-benchmark.toml` files read from GitHub repos (`--repo`, `--github-org`), or CSV exports from other trackers |
+| Estimation styles | Story points, effort, size, hours (`OriginalEstimate`), or item count for teams that don't estimate. Missing estimates are excluded or filled with the team median |
+| Process templates | Scrum, Agile, CMMI and Basic |
+| Access | Read-only. Uses `az login` (SSO) or an `ADO_PAT` / `ADO_TOKEN` (`transport = "auto"` picks) |
+| Robust enterprise runs | A product with no baseline or an error is listed with its status and never stops the run |
+| Data guards | Items re-sprinted after they were done keep their original plan. Backfilled items (created already done), scope added after the baseline, and removed items are reported, never compared |
+
+**Reporting**
+
+| Feature | What it does |
+|---|---|
+| Report | `out/report.html`, self-contained, with a **View** selector: Enterprise overview plus every product, grouped by business unit |
+| Automation | GitHub Action runs `compare` daily in imported copies. `baseline` runs open a pull request for review |
+| Claude Code skill | `skills/agentic-benchmark/SKILL.md` guides teams through setup, baseline, compare and write-up |
+
+**Measures per product**
+
+| Measure | Definition |
+|---|---|
+| **×-speed** (calendar compression) | planned calendar days ÷ actual calendar days, for the same delivered baseline scope |
+| Planned window / actual window | baseline (or run start) → latest planned sprint end of the delivered items / → last delivery |
+| % of baseline delivered | delivered baseline estimate ÷ total baseline estimate |
+| Agentic share | share of delivered estimate matching `agentic_rule` (tag, area path or field) |
+| **Projected ×-speed** and projected end | full baseline scope at the pace so far. Pace is measured over *all elapsed time*, so stalls count |
+| Weeks vs plan (projected) | baseline end date − projected end date |
+| Sprint table | per planned sprint: planned done-by, actually done-by, days early, agentic share |
+| Trend | the measures above, week by week since the baseline |
+| Stall warning | no baseline item delivered for more than 14 days |
+
+**Measures for the enterprise** (one vote per product, only unit-free measures, never summed points)
+
+| Measure | Definition |
+|---|---|
+| Adoption funnel | onboarded → baseline frozen → delivering → ≥ 50% of baseline delivered |
+| Median ×-speed and spread | median across delivering products, with the middle half (≥ 4 products) or the range |
+| Median % delivered, median agentic share, median projected ×, median weeks vs plan | the medians across products |
+| Business-unit rollup | all of the above per `group` |
+| Enterprise trend | per week, the median of each product's latest reading, with the number of products reporting |
+
+What's new in each version: [RELEASE_NOTES.md](RELEASE_NOTES.md). Working on the code: [CLAUDE.md](CLAUDE.md).
+
 ## Install
 
 Requirements:
@@ -104,23 +160,57 @@ Settings go in a team repo's `.agentic-benchmark.toml` (one `[product]` block) o
 | `velocity`, `velocity_sprints` | `auto` = average of the last N finished sprints, or a fixed number | `auto`, 3 |
 | `run_start` | Day the agentic SDLC started; picks the baseline and starts both clocks | – |
 | `baseline` | Pin a specific baseline file | latest baseline on or before `run_start`, else the earliest |
+| `group` | Business unit or domain, used for the enterprise rollup and to group products in the report's selector | – |
 | `include_titles` | Set to `false` to drop work item titles from the outputs | `true` |
 | `timezone` | Used to turn timestamps into calendar days | Europe/Amsterdam |
 | `source = "csv"`, `csv_path` | Non-ADO trackers (`retro` only); see `examples/*.csv` | – |
 
-## Outputs
+## Reporting out
+
+Every `compare` and `retro` run writes **`out/report.html`**: one self-contained file, with images embedded, that you can email, attach or publish as is. A **View** selector at the top switches between the enterprise overview and each product, grouped by business unit. Each view has its own link (`report.html#<product>`).
+
+1. **Enterprise overview**, for senior management:
+   - A summary sentence
+   - An adoption funnel: onboarded → baselined → delivering → ≥ 50% delivered
+   - Medians across products: ×-speed, % of baseline delivered, agentic share, projected weeks against plan
+   - A weekly trend
+   - A rollup by business unit (`group` in config)
+   - A clickable table of all products, with a status for each
+2. **Per product:**
+   - Headline figures
+   - The **baseline vs agentic timeline**: each planned sprint's window against when its scope was actually delivered
+   - A sprint-by-sprint table (planned done-by, actually done-by, days early, agentic share)
+   - The burndown on the same scope
+   - Every exclusion and warning
+3. **How to read this:** the caveats, always included.
+
+The same enterprise numbers are written to `out/enterprise_summary.json` for dashboards. Points are never added up across teams: every product counts once and only unit-free measures are rolled up (see [METHOD.md](docs/METHOD.md#enterprise-rollup)).
+
+| Baseline vs agentic timeline | Plan vs actual burndown |
+|---|---|
+| ![timeline](docs/images/sample-timeline.png) | ![burndown](docs/images/sample-burndown.png) |
+
+*(Synthetic demo data from `examples/`.)*
+
+## All outputs
 
 ```
 baselines/<product>/<date>.json          frozen plan (commit it)
-out/<product>/baseline_plan.png          the plan as a burndown
-out/<product>/compare_burndown.png       plan vs actual on the same scope
-out/<product>/compare_items.csv          every row behind the chart, with notes on exclusions
-out/portfolio_summary.md|csv             one row per product
+out/report.html                          the shareable report (enterprise overview + every product)
+out/enterprise_summary.json              enterprise rollup, by business unit and weekly trend
+out/portfolio_summary.md|csv             one row per product (for decks and spreadsheets)
 out/portfolio_compression.png            ×-speed by product
+out/<product>/baseline_plan.png          the plan as a burndown
+out/<product>/compare_timeline.png       baseline vs agentic timeline, by planned sprint
+out/<product>/compare_burndown.png       plan vs actual on the same scope
+out/<product>/compare_trend.png          ×-speed and % delivered week by week
+out/<product>/compare_items.csv          every row behind the numbers, with notes on exclusions
 out/cache/                               raw ADO revisions: includes names, keep local (git-ignored)
 ```
 
-No assignees, emails or other personal data are written to the outputs. Titles can be switched off.
+No assignees, emails or other personal data are written to the outputs. Titles can be switched off (`include_titles = false`).
+
+**About "effort":** the comparison is estimated scope (points, hours or item count) against calendar time. It does not measure the labour hours spent by people or agents.
 
 ## Before you quote a number
 

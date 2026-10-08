@@ -3,11 +3,16 @@ from __future__ import annotations
 
 import base64
 import json
+import re
 import subprocess
 import tomllib
 from pathlib import Path
 
 REPO_CONFIG = ".agentic-benchmark.toml"
+
+
+def slug(name: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
 
 DEFAULTS = {
     "source": "ado",
@@ -33,6 +38,7 @@ DEFAULTS = {
     "include_titles": True,
     "timezone": "Europe/Amsterdam",
     "area_path": None,
+    "group": None,                 # business unit / domain for enterprise rollups
     "concurrency": 8,
 }
 

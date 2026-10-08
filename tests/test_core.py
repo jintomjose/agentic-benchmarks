@@ -101,3 +101,33 @@ def test_backfilled_items_excluded_from_retro_time_comparison():
     items = backlog.build_items(hist, CFG, now, SP)
     r = metrics.retro("Test", items, hist, SPRINTS, {**CFG, "run_start": "2026-01-20"}, now, "points")
     assert r.excluded["backfilled"] == 3 and r.compared_estimate == 3
+
+
+def test_projection_uses_elapsed_time_so_a_stall_projects_late():
+    hist = {1: [rev(1, "2026-01-02T00:00:00Z", it="P\\S3", pts=5)],
+            2: [rev(1, "2026-01-02T00:00:00Z", it="P\\S3", pts=5)]}
+    t0 = at("2026-01-19")
+    items = backlog.build_items(hist, CFG, t0, SP)
+    backlog.forecast(items, SPRINTS, t0, UTC, 0)
+    doc = metrics.baseline_doc(metrics.baseline("T", items, CFG, t0, "points", 0, []), items, CFG)
+    hist[1].append(rev(2, "2026-01-20T12:00:00Z", "Done", it="P\\S3"))  # half done on day 2, then nothing
+    now = at("2026-03-29")                                                # 70 days elapsed
+    r = metrics.compare("T", doc, backlog.build_items(hist, CFG, now, SP), CFG, now, "points")
+    assert r.compression == 28 / 2                    # Jan 19 -> Feb 15 planned vs Jan 19 -> Jan 20 actual
+    assert r.projected_compression < 1                 # 140 days projected vs 28 planned
+    assert any("no baseline item delivered" in w for w in r.warnings)
+
+
+def test_enterprise_rollup_is_unit_free_and_counts_products_once():
+    from agentic_benchmark import enterprise
+    a = metrics.Result("A", "compare", "2026-03-01", "points", total_estimate=100, delivered_estimate=60,
+                       compression=10, agentic_share_of_delivered=.9, group="Retail",
+                       baseline_end="2026-06-01", projected_end="2026-04-01")
+    b = metrics.Result("B", "compare", "2026-03-01", "hours", total_estimate=4000, delivered_estimate=1000,
+                       compression=2, agentic_share_of_delivered=.5, group="Retail")
+    c = metrics.Result("C", "compare", "2026-03-01", "points", status="no_baseline", group="Wholesale")
+    s = enterprise.stats([a, b, c])
+    assert (s["products"], s["baselined"], s["delivering"], s["half_delivered"]) == (3, 2, 2, 1)
+    assert s["median_x"] == 6 and s["median_delivered_share"] == (.6 + .25) / 2
+    assert round(s["median_weeks_forward"], 1) == 8.7
+    assert enterprise.by_group([a, b, c])["Wholesale"]["delivering"] == 0

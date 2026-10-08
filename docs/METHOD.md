@@ -21,9 +21,21 @@
 - **Delivered**: a baseline item that is in a done state at Tn, and whose last entry into done came after T0. The timestamp comes from revision history.
 - **Same scope on both lines**: each delivered baseline item burns down at its planned finish date (plan line) and at its actual delivery (actual line). Estimates come from the baseline.
 - **×-speed (compression)** = planned calendar days ÷ actual calendar days. Both clocks start on the baseline day, or on `run_start` if that's later. Days are counted inclusively, in the configured timezone.
-- **Projection**: the full baseline scope at the pace observed so far, compared with the baseline's end date. It is labelled as a projection.
+- **Projection**: the full baseline scope at the pace observed so far, compared with the baseline's end date. Pace = delivered estimate ÷ calendar days elapsed up to the as-of date (not up to the last delivery), so a product that has stalled projects late. If nothing has been delivered for more than 14 days, a warning is added. It is always labelled as a projection.
+- **Trend**: `compare` rebuilds the reading for each week since the baseline from revision history (`--trend weekly|daily|none`).
 - **Scope added after T0** is reported but never compared, because it has no prior plan. **Baseline items removed** since T0 are reported as well.
 - **Agentic share**: the share of delivered items, by estimate, that match `agentic_rule` at Tn.
+
+## Enterprise rollup
+
+Estimates are relative to each team, so nothing is summed across products. Every product counts once, and only unit-free measures are rolled up:
+
+- **Adoption funnel:** onboarded → baseline frozen → delivering → ≥ 50% of baseline delivered.
+- **Medians across delivering products:** ×-speed, with its spread (middle half, or the range when there are fewer than 4 products), % of baseline delivered, agentic share, and projected weeks against the baseline end date.
+- **Trend:** per calendar week, the median of each product's latest reading that week. The number of products reporting is shown on the chart.
+- **Business units:** the same measures per `group`.
+
+A product that can't be read (missing baseline, auth error) is listed with its status and never stops the run.
 
 ## Retrospective method: `retro`
 

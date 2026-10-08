@@ -43,7 +43,7 @@ agentic-benchmark retro --config examples/portfolio.toml --out out/demo
 Wrote out/demo/portfolio_summary.md, portfolio_summary.csv, portfolio_compression.png
 ```
 
-Open `out/demo/portfolio_summary.md` and `out/demo/synthetic-product-a/retro_burndown.png` to see what the reports look like.
+Open `out/demo/report.html` in a browser to see what the report looks like.
 
 ---
 
@@ -135,10 +135,10 @@ agentic-benchmark compare --config .agentic-benchmark.toml
   Plan   2026-06-11 → 2026-09-06 = 88 days, 5 sprints
   Actual 2026-06-11 → 2026-06-13 = 3 days
   Calendar compression ≈29.3×
-  Projection, full baseline scope at current pace: ends 2026-06-16, ≈17.0×
+  Projection, full baseline scope at current pace: ends 2026-06-18, ≈12.8×
 ```
 
-Read `out/<product>/compare_burndown.png` and `out/<product>/compare_items.csv`; every number can be traced to a row in that CSV. Before you share a number, read the caveats in [METHOD.md](METHOD.md).
+Open **`out/report.html`**. It is the shareable report: summary, the baseline vs agentic timeline, a sprint-by-sprint table, the burndown and the caveats, in one self-contained file you can email or attach. Every number can be traced to a row in `out/<product>/compare_items.csv`. Before you share a number, read the caveats in [METHOD.md](METHOD.md).
 
 To see the numbers as they stood on an earlier day: `agentic-benchmark compare --config .agentic-benchmark.toml --as-of 2026-12-01`.
 
@@ -174,7 +174,7 @@ Use either source:
 agentic-benchmark compare --github-org my-org --out out/2026-12
 ```
 
-`out/2026-12/portfolio_summary.md` holds one row per product, and `portfolio_compression.png` is the chart for leadership.
+`out/2026-12/report.html` is the report for leadership. It opens on an **Enterprise overview** (adoption funnel, median ×-speed, % of baseline delivered, agentic share, projected weeks against plan, weekly trend, rollup by business unit). A **View** selector at the top switches to any product, grouped by business unit, and each view has its own link (`report.html#<product>`). Add `group = "Retail"` (or similar) to each product's config to get the business-unit rollup. `portfolio_summary.csv` has the same numbers for your own decks.
 
 ### C4. Run it automatically with GitHub Actions
 

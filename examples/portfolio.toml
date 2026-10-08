@@ -21,6 +21,7 @@ timezone = "Europe/Amsterdam"
 # --- Azure DevOps product (replace org/project with your own) ---
 # [[product]]
 # name = "Mortgage onboarding"
+# group = "Retail"                    # business unit, for the enterprise rollup
 # org = "https://dev.azure.com/<your-org>"
 # project = "<project>"
 # area_path = "<project>\\Mortgages"  # optional: one team/area inside a shared project
@@ -30,6 +31,7 @@ timezone = "Europe/Amsterdam"
 # --- Any other tracker (e.g. Jira) via a normalised CSV export ---
 [[product]]
 name = "Synthetic product A"
+group = "Retail"
 source = "csv"
 csv_path = "examples/synthetic_product_a.csv"
 run_start = "2026-09-14"
@@ -37,6 +39,7 @@ as_of = "2026-10-08"
 
 [[product]]
 name = "Synthetic product B"
+group = "Wholesale"
 source = "csv"
 csv_path = "examples/synthetic_product_b.csv"
 run_start = "2026-09-21"

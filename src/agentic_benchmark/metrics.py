@@ -33,8 +33,12 @@ class Result:
     projected_end: str | None = None         # compare: whole baseline scope at the observed pace
     projected_compression: float | None = None
     velocity: float | None = None
+    baseline_end: str | None = None          # compare: end date of the full baseline plan
+    group: str | None = None                 # business unit / domain, for enterprise rollups
+    status: str = "ok"                       # ok | no_baseline | no_delivery | error
     excluded: dict = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
+    trend: list[dict] = field(default_factory=list)  # compare: weekly readings since the baseline
 
 
 def _days(a: date, b: date) -> int:
@@ -135,15 +139,22 @@ def compare(name: str, base: dict, items: list[Item], cfg: dict, at: datetime, u
         i.note = "added after baseline"
     cmp = [i for i in done if i.in_comparison]
     r.compared_items, r.compared_estimate = len(cmp), sum(i.estimate for i in cmp)
+    plan_end = max((i.planned_finish for i in scope if i.planned_finish), default=None)
+    r.baseline_end = plan_end.isoformat() if plan_end else None
     if not cmp:
+        r.status = "no_delivery"
         r.warnings.append("nothing from the baseline has been delivered yet")
         return r
     _windows(r, cmp, tz, start, start)
 
     # Projection for the whole baseline scope at the pace observed so far.
-    plan_end = max((i.planned_finish for i in scope if i.planned_finish), default=None)
+    # Pace is measured over all elapsed time up to as-of, so a stalled product projects late.
+    elapsed = _days(start, at.astimezone(tz).date())
+    idle = (at.astimezone(tz).date() - date.fromisoformat(r.actual_end)).days
+    if r.remaining_estimate > 0 and idle > 14:
+        r.warnings.append(f"no baseline item delivered in the last {idle} days; the projection reflects the stall")
     if plan_end and r.remaining_estimate > 0:
-        pace = r.delivered_estimate / r.actual_days
+        pace = r.delivered_estimate / elapsed
         days_total = round(r.total_estimate / pace)
         r.projected_end = date.fromordinal(start.toordinal() + days_total - 1).isoformat()
         r.projected_compression = _days(start, plan_end) / days_total
@@ -193,6 +204,7 @@ def retro(name: str, items: list[Item], histories: dict, sprints: dict, cfg: dic
     cmp = [i for i in done if i.in_comparison]
     r.compared_items, r.compared_estimate = len(cmp), sum(i.estimate for i in cmp)
     if not cmp:
+        r.status = "no_delivery"
         r.warnings.append("no delivered items left to compare")
         return r
     a0 = run_start or min(i.delivered.astimezone(tz).date() for i in cmp)

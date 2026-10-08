@@ -16,11 +16,8 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from . import ado, backlog, config, metrics, report
-
-
-def slug(name: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+from . import ado, backlog, config, htmlreport, metrics, report
+from .config import slug
 
 
 def products(args) -> list[dict]:
@@ -47,26 +44,52 @@ def moment(cfg: dict, cli_as_of: str | None) -> datetime:
     return backlog.end_of_day(d, tz) if d else datetime.now(timezone.utc)
 
 
-def load(cfg: dict, at: datetime, out: Path, offline: bool, history: bool):
-    """Items as they stood at `at`, plus what the plan/velocity steps need."""
-    since = None
-    if history:
-        since = (at - timedelta(days=cfg["history_days"])).date().isoformat()
+UNITS = {"points": "points", "hours": "hours", "count": "items"}
+
+
+def fetch(cfg: dict, at: datetime, out: Path, offline: bool, history: bool):
+    """Revision histories (cached) and sprint calendar for one product."""
+    since = (at - timedelta(days=cfg["history_days"])).date().isoformat() if history else None
     histories, tree = ado.load_histories(cfg, out / "cache" / slug(cfg["name"]), offline, since)
-    est_field = backlog.estimate_field(histories, cfg)
+    return histories, backlog.load_sprints(tree), backlog.estimate_field(histories, cfg)
+
+
+def items_at(histories: dict, cfg: dict, at: datetime, est_field):
     items = backlog.build_items(histories, cfg, at, est_field)
-    warnings = backlog.fill_estimates(items, cfg)
-    unit = {"points": "points", "hours": "hours", "count": "items"}[cfg["estimate"]]
-    return histories, backlog.load_sprints(tree), items, est_field, unit, warnings
+    return items, backlog.fill_estimates(items, cfg)
+
+
+def _placeholder(cfg: dict, mode: str, status: str, msg: str) -> metrics.Result:
+    r = metrics.Result(product=cfg["name"], mode=mode, as_of=date.today().isoformat(),
+                       estimate_unit=UNITS.get(cfg["estimate"], cfg["estimate"]), group=cfg.get("group"), status=status)
+    r.warnings.append(msg)
+    print(f"\n=== {cfg['name']}  [{status}] {msg}", file=sys.stderr)
+    return r
+
+
+def each_product(args, mode: str, fn):
+    """Run fn(cfg) per product; one failing product never stops an enterprise run."""
+    runs = []
+    for cfg in products(args):
+        try:
+            run = fn(cfg)
+        except Exception as e:  # report and carry on
+            run = (_placeholder(cfg, mode, "error", f"{type(e).__name__}: {str(e)[:300]}"), [], ZoneInfo(cfg["timezone"]))
+        if run:
+            run[0].group = cfg.get("group")
+            runs.append(run)
+    return runs
 
 
 # ------------------------------------------------------------------ commands
 
 def cmd_baseline(args):
     out = Path(args.out)
-    for cfg in products(args):
+
+    def one(cfg):
         at, tz = moment(cfg, args.as_of), ZoneInfo(cfg["timezone"])
-        histories, sprints, items, est_field, unit, warns = load(cfg, at, out, args.offline, history=True)
+        histories, sprints, est_field = fetch(cfg, at, out, args.offline, history=True)
+        items, warns = items_at(histories, cfg, at, est_field)
         team = backlog.team_sprints(histories, sprints)
         if cfg["velocity"] == "auto":
             vel, detail = backlog.velocity(items, team, at, tz, cfg["velocity_sprints"])
@@ -74,7 +97,7 @@ def cmd_baseline(args):
             vel, detail = float(cfg["velocity"]), []
         open_items = [i for i in items if not i.delivered]
         warns += backlog.forecast(open_items, team, at, tz, vel)
-        r = metrics.baseline(cfg["name"], items, cfg, at, unit, vel, detail)
+        r = metrics.baseline(cfg["name"], items, cfg, at, UNITS[cfg["estimate"]], vel, detail)
         r.warnings = warns + r.warnings
         report.print_result(r, f", estimate field {est_field or 'count'}")
 
@@ -87,9 +110,15 @@ def cmd_baseline(args):
         report.chart(r, open_items, tz, pdir / "baseline_plan.png")
         report.items_csv(open_items, tz, pdir / "baseline_items.csv")
         print(f"  -> {path}  (commit this file: it is the frozen plan)")
+        return r, open_items, tz
+
+    runs = each_product(args, "baseline", one)
+    failed = [r for r, _, _ in runs if r.status == "error"]
+    if failed:
+        print(f"\n{len(failed)} product(s) failed: " + ", ".join(r.product for r in failed), file=sys.stderr)
 
 
-def pick_baseline(cfg: dict, args) -> Path:
+def pick_baseline(cfg: dict, args) -> Path | None:
     if args.baseline:
         return Path(args.baseline)
     if cfg.get("baseline"):
@@ -98,39 +127,66 @@ def pick_baseline(cfg: dict, args) -> Path:
     if cfg.get("run_start"):
         before = [f for f in files if f.stem <= cfg["run_start"]]
         files = before[-1:] or files
-    if not files:
-        sys.exit(f"{cfg['name']}: no baseline found; run `agentic-benchmark baseline` first or use `retro`")
-    return files[0]
+    return files[0] if files else None
+
+
+def trend_dates(start: datetime, end: datetime, step: str) -> list[datetime]:
+    if step == "none":
+        return []
+    delta = timedelta(days=1 if step == "daily" else 7)
+    out, d = [], start + delta
+    while d < end:
+        out.append(d)
+        d += delta
+    return out + [end]
 
 
 def cmd_compare(args):
-    out, results = Path(args.out), []
-    for cfg in products(args):
-        at, tz = moment(cfg, args.as_of), ZoneInfo(cfg["timezone"])
+    out = Path(args.out)
+
+    def one(cfg):
+        if cfg["source"] == "csv":  # no revision history to compare against: fall back to retro
+            return _retro_one(cfg, args, out)
         bpath = pick_baseline(cfg, args)
+        if not bpath:
+            return _placeholder(cfg, "compare", "no_baseline",
+                                "no baseline yet: run `agentic-benchmark baseline` before the agentic run starts"), [], ZoneInfo(cfg["timezone"])
+        at, tz = moment(cfg, args.as_of), ZoneInfo(cfg["timezone"])
         base = json.loads(bpath.read_text())
-        _, _, items, _, unit, warns = load(cfg, at, out, args.offline, history=True)
+        histories, _, est_field = fetch(cfg, at, out, args.offline, history=True)
+        unit = UNITS[cfg["estimate"]]
+        items, warns = items_at(histories, cfg, at, est_field)
         r = metrics.compare(cfg["name"], base, items, cfg, at, unit)
         r.warnings = warns + r.warnings
+        for d in trend_dates(metrics.parse_dt(base["summary"]["as_of"]), at, args.trend):
+            p = metrics.compare(cfg["name"], base, items_at(histories, cfg, d, est_field)[0], cfg, d, unit)
+            r.trend.append({"date": d.astimezone(tz).date().isoformat(), "compression": p.compression,
+                            "delivered_share": p.delivered_estimate / p.total_estimate if p.total_estimate else 0,
+                            "agentic_share": p.agentic_share_of_delivered, "projected": p.projected_compression})
         report.print_result(r, f", baseline {bpath.name}")
-        results.append(_write(r, items, tz, out))
-    _portfolio(results, out)
+        return _write(r, items, tz, out)
+
+    _portfolio(each_product(args, "compare", one), out)
+
+
+def _retro_one(cfg, args, out: Path):
+    at, tz = moment(cfg, args.as_of), ZoneInfo(cfg["timezone"])
+    if cfg["source"] == "csv":
+        items, histories, sprints, unit = metrics.items_from_csv(cfg, at), {}, {}, UNITS[cfg["estimate"]]
+        warns = backlog.fill_estimates(items, cfg)
+    else:
+        histories, sprints, est_field = fetch(cfg, at, out, args.offline, history=False)
+        items, warns = items_at(histories, cfg, at, est_field)
+        unit = UNITS[cfg["estimate"]]
+    r = metrics.retro(cfg["name"], items, histories, sprints, cfg, at, unit)
+    r.warnings = warns + r.warnings
+    report.print_result(r)
+    return _write(r, items, tz, out)
 
 
 def cmd_retro(args):
-    out, results = Path(args.out), []
-    for cfg in products(args):
-        at, tz = moment(cfg, args.as_of), ZoneInfo(cfg["timezone"])
-        if cfg["source"] == "csv":
-            items, histories, sprints, unit, warns = metrics.items_from_csv(cfg, at), {}, {}, cfg["estimate"], []
-            warns += backlog.fill_estimates(items, cfg)
-        else:
-            histories, sprints, items, _, unit, warns = load(cfg, at, out, args.offline, history=False)
-        r = metrics.retro(cfg["name"], items, histories, sprints, cfg, at, unit)
-        r.warnings = warns + r.warnings
-        report.print_result(r)
-        results.append(_write(r, items, tz, out))
-    _portfolio(results, out)
+    out = Path(args.out)
+    _portfolio(each_product(args, "retro", lambda cfg: _retro_one(cfg, args, out)), out)
 
 
 def _write(r, items, tz, out: Path):
@@ -139,14 +195,19 @@ def _write(r, items, tz, out: Path):
     report.items_csv(items, tz, pdir / f"{r.mode}_items.csv")
     (pdir / f"{r.mode}_summary.json").write_text(json.dumps(r.__dict__, indent=2, default=str))
     report.chart(r, items, tz, pdir / f"{r.mode}_burndown.png")
-    return r
+    report.timeline(r, items, tz, pdir / f"{r.mode}_timeline.png")
+    report.trend_chart(r, pdir / f"{r.mode}_trend.png")
+    return r, items, tz
 
 
-def _portfolio(results, out: Path):
-    if results:
+def _portfolio(runs, out: Path):
+    if runs:
+        results = [r for r, _, _ in runs]
+        out.mkdir(parents=True, exist_ok=True)
         report.portfolio(results, out)
         report.portfolio_chart(results, out / "portfolio_compression.png")
-        print(f"\nWrote {out}/portfolio_summary.md, portfolio_summary.csv, portfolio_compression.png")
+        htmlreport.write(runs, out)
+        print(f"\nWrote {out}/report.html  (plus portfolio_summary.md/.csv, enterprise_summary.json and per-product charts)")
 
 
 def cmd_discover(args):
@@ -224,6 +285,8 @@ def main(argv=None):
         p.add_argument("--baselines", default="baselines", help="baseline directory (default: baselines)")
         if name == "compare":
             p.add_argument("--baseline", help="specific baseline JSON (default: picked per product)")
+            p.add_argument("--trend", choices=["weekly", "daily", "none"], default="weekly",
+                           help="rebuild readings since the baseline for the trend charts (default: weekly)")
         if name == "discover":
             p.add_argument("--org"), p.add_argument("--project"), p.add_argument("--area-path")
     args = ap.parse_args(argv)

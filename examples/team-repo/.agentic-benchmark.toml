@@ -2,6 +2,7 @@
 # Generate a starting point with:  agentic-benchmark discover --org <url> --project <name> --area-path <path>
 [product]
 name = "Mortgage onboarding"
+group = "Retail"                                    # business unit, for the enterprise rollup
 org = "https://dev.azure.com/<your-org>"
 project = "<ado-project>"
 area_path = "<ado-project>\\Mortgages"             # your team's slice of a shared project

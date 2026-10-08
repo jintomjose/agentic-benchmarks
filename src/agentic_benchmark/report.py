@@ -85,7 +85,7 @@ def portfolio_chart(results: list[Result], path: Path):
     rows = sorted((r for r in results if r.compression), key=lambda r: r.compression)
     if not rows:
         return
-    fig, ax = plt.subplots(figsize=(12, 1.4 + .7 * len(rows)), dpi=150)
+    fig, ax = plt.subplots(figsize=(12, 1.4 + .55 * len(rows)), dpi=150)
     ax.barh([r.product for r in rows], [r.compression for r in rows], color=ACTUAL, height=.55)
     for y, r in enumerate(rows):
         ax.text(r.compression, y, f"  ≈{r.compression:.1f}×  ({r.compared_estimate:.0f} {r.estimate_unit}, "
@@ -119,7 +119,7 @@ def items_csv(items: list[Item], tz: ZoneInfo, path: Path):
 
 
 def portfolio(results: list[Result], out: Path):
-    cols = [k for k in asdict(results[0]) if k not in ("warnings", "excluded")]
+    cols = [k for k in asdict(results[0]) if k not in ("warnings", "excluded", "trend")]
     with open(out / "portfolio_summary.csv", "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=cols + ["excluded"])
         w.writeheader()
@@ -168,3 +168,89 @@ def print_result(r: Result, note: str = ""):
             print(f"  Projection, full baseline scope at current pace: ends {r.projected_end}, ≈{r.projected_compression:.1f}×")
     for w in r.warnings:
         print(f"  ! {w}")
+
+
+def timeline(r: Result, items: list[Item], tz: ZoneInfo, path: Path):
+    """Baseline vs agentic timeline: per planned sprint, the planned window (grey) and the span in
+    which that sprint's scope was actually delivered (orange)."""
+    import matplotlib.dates as mdates
+    from collections import defaultdict
+    from datetime import timedelta
+    cmp = [i for i in items if i.in_comparison]
+    if not cmp:
+        return
+    plt = _plt()
+    groups = defaultdict(list)
+    for i in cmp:
+        groups[(i.planned_start, i.planned_finish, i.planned_sprint)].append(i)
+    rows = sorted(groups.items(), key=lambda g: (g[0][1], g[0][0]))
+    fig, ax = plt.subplots(figsize=(14, 1.6 + .62 * len(rows)), dpi=150)
+    labels = []
+    for y, ((s, f, name), its) in enumerate(rows):
+        pts = sum(i.estimate for i in its)
+        ax.barh(y - .17, (f - s).days + 1, left=s, height=.32, color=PLAN, alpha=.8)
+        d = sorted(i.delivered.astimezone(tz).date() for i in its)
+        ax.barh(y + .17, max((d[-1] - d[0]).days + 1, 1), left=d[0], height=.32, color=ACTUAL)
+        ax.text(f + timedelta(days=1), y - .17, f" planned by {f:%b %d}", va="center", fontsize=9, color=MUTED)
+        ax.text(d[-1] + timedelta(days=1), y + .17, f" delivered by {d[-1]:%b %d}", va="center", fontsize=9, color=INK)
+        labels.append(f"{(name or '').split(chr(92))[-1]}  ·  {len(its)} item{'s' if len(its) != 1 else ''}, {pts:g} {r.estimate_unit}")
+    ax.set_yticks(range(len(rows)), labels)
+    ax.invert_yaxis()
+    start = date.fromisoformat(r.actual_start)
+    ax.axvline(start, color=INK, lw=1, ls=":")
+    ax.text(start, len(rows) - .45, " agentic run starts", fontsize=9, color=INK, va="bottom")
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
+    lo = min(min(s for (s, _, _), _ in rows), start)
+    ax.set_xlim(lo - timedelta(days=2), max(f for (_, f, _), _ in rows) + timedelta(days=(max(f for (_, f, _), _ in rows) - lo).days * .22 + 6))
+    fig.suptitle(f"{r.product}: baseline plan vs agentic delivery, by planned sprint", x=.02, ha="left",
+                 fontsize=16, weight="bold", color=INK)
+    ax.set_title("grey = sprint the work was planned in  ·  orange = when it was actually delivered",
+                 loc="left", fontsize=11, color=MUTED)
+    _style(ax)
+    ax.grid(axis="y", visible=False)
+    ax.grid(axis="x", alpha=.25)
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+
+
+def _two_panel(points, title, path, n_label=None):
+    """Left: ×-speed over time; right: share of baseline delivered over time."""
+    import matplotlib.dates as mdates
+    plt = _plt()
+    xs = [date.fromisoformat(p["date"]) for p in points]
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(14, 4.2), dpi=150)
+    comp = [(x, p["compression"]) for x, p in zip(xs, points) if p.get("compression")]
+    if comp:
+        a1.plot(*zip(*comp), color=ACTUAL, lw=3, marker="o", ms=4, label="×-speed (delivered scope)")
+    proj = [(x, p["projected"]) for x, p in zip(xs, points) if p.get("projected")]
+    if proj:
+        a1.plot(*zip(*proj), color=PLAN, lw=2, ls="--", label="projected, full baseline")
+    a1.axhline(1, color=PLAN, lw=1, ls=":")
+    a1.set_title("Calendar ×-speed", loc="left", fontsize=12, color=INK, weight="bold")
+    a1.set_ylim(bottom=0)
+    a1.legend(frameon=False, fontsize=9)
+    a2.plot(xs, [100 * p["delivered_share"] for p in points], color=INK, lw=3, marker="o", ms=4)
+    a2.set_ylim(0, 105)
+    a2.set_title("% of baseline delivered", loc="left", fontsize=12, color=INK, weight="bold")
+    if n_label:
+        for x, p in zip(xs, points):
+            a2.annotate(str(p[n_label]), (x, 100 * p["delivered_share"]), textcoords="offset points",
+                        xytext=(0, 7), ha="center", fontsize=8, color=MUTED)
+    for a in (a1, a2):
+        a.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
+        _style(a)
+    fig.suptitle(title, x=.02, ha="left", fontsize=15, weight="bold", color=INK)
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+
+
+def trend_chart(r: Result, path: Path):
+    if len(r.trend) >= 2:
+        _two_panel(r.trend, f"{r.product}: progress since the baseline", path)
+
+
+def enterprise_trend_chart(points: list[dict], path: Path):
+    if len(points) >= 2:
+        _two_panel(points, "Enterprise: median across products (numbers = products reporting)", path, n_label="n")
