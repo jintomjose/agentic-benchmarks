@@ -21,7 +21,8 @@
 - **Delivered**: a baseline item that is in a done state at Tn, and whose last entry into done came after T0. The timestamp comes from revision history.
 - **Same scope on both lines**: each delivered baseline item burns down at its planned finish date (plan line) and at its actual delivery (actual line). Estimates come from the baseline.
 - **×-speed (compression)** = planned calendar days ÷ actual calendar days. Both clocks start on the baseline day, or on `run_start` if that's later. Days are counted inclusively, in the configured timezone.
-- **Projection**: the full baseline scope at the pace observed so far, compared with the baseline's end date. Pace = delivered estimate ÷ calendar days elapsed up to the as-of date (not up to the last delivery), so a product that has stalled projects late. If nothing has been delivered for more than 14 days, a warning is added. It is always labelled as a projection.
+- **Pause diagnostic**: the *last build* is the last delivery of any in-scope item after the baseline (baseline or added scope). If nothing has been built for more than `pause_after_days` (default 14) and baseline work remains, the product is **paused since** the day after its last build. Its clock stops at the last build, so the idle tail is not measured. The product is flagged in the report, and its figures stay frozen until delivery resumes. A gap of 14 days or less counts as active time.
+- **Projection**: the full baseline scope at the pace observed so far, compared with the baseline's end date. Pace = delivered estimate ÷ calendar days of the measured period: from the baseline (or `run_start`) to the as-of date, or to the last build if the product is paused. It is always labelled as a projection.
 - **Trend**: `compare` rebuilds the reading for each week since the baseline from revision history (`--trend weekly|daily|none`).
 - **Scope added after T0** is reported but never compared, because it has no prior plan. **Baseline items removed** since T0 are reported as well.
 - **Agentic share**: the share of delivered items, by estimate, that match `agentic_rule` at Tn.
@@ -30,7 +31,7 @@
 
 Estimates are relative to each team, so nothing is summed across products. Every product counts once, and only unit-free measures are rolled up:
 
-- **Adoption funnel:** onboarded → baseline frozen → delivering → ≥ 50% of baseline delivered.
+- **Adoption funnel:** onboarded → baseline frozen → delivering → ≥ 50% of baseline delivered, plus how many products are paused.
 - **Medians across delivering products:** ×-speed, with its spread (middle half, or the range when there are fewer than 4 products), % of baseline delivered, agentic share, and projected weeks against the baseline end date.
 - **Trend:** per calendar week, the median of each product's latest reading that week. The number of products reporting is shown on the chart.
 - **Business units:** the same measures per `group`.
@@ -48,7 +49,8 @@ Use this when no baseline was taken. The plan is rebuilt from revision history: 
 3. **Estimates are team-relative.** Compare ×-speed across products, never raw points.
 4. **Agentic share depends on tagging discipline.** Spot-check `compare_items.csv`.
 5. **Done is not value.** Report quality signals alongside speed: escaped defects, change failure rate, rework.
-6. **Early compares are noisy.** A few fast items can give a large × in week one. Prefer the projection, and quote numbers only once a meaningful share of the baseline has been delivered.
+6. **Paused products are frozen, not finished.** Stopping the clock at the last build keeps idle time out of the numbers, but the work remaining is still open. Always show the paused status next to the figures. If a paused product resumes, the pause becomes a gap *inside* the measured period and counts as elapsed time.
+7. **Early compares are noisy.** A few fast items can give a large × in week one. Prefer the projection, and quote numbers only once a meaningful share of the baseline has been delivered.
 
 ## Validation: Momentum (pilot product)
 

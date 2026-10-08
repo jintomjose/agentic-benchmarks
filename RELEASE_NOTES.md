@@ -1,5 +1,19 @@
 # Release notes
 
+## 0.4.0 (2026-10-08): pause diagnostic
+
+### New
+- **Pause diagnostic.**
+  - **What counts as paused:** a product with no build for more than `pause_after_days` (default 14) while baseline work remains. A build is the delivery of any in-scope item, baseline or added.
+  - **What happens:** the product is marked **paused since <date>**, its **clock stops at the last build**, and the idle tail is not measured.
+  - **Where it shows:** every `compare` and `retro` run prints a line per product, e.g. `Pause diagnostic: PAUSED since 2026-06-25: clock stopped at last build 2026-06-24 (106 days ago)`.
+- **Enterprise overview:** the paused count sits next to the adoption funnel and in the summary sentence. Paused products get an amber "paused since" badge in the selector and the product table, plus an "N days idle" tile on their own page.
+- `enterprise_summary.json` gains a `paused` count. Each product result gains `last_activity`, `idle_days`, `paused_since` and `measured_to`.
+
+### Changed
+- **Projection is measured over active time:** up to as-of while a product is active, and up to the last build once it is paused. This replaces 0.3.0's "all elapsed time", which counted a pause as a stall. Example from the pilot product, paused after Jun 24: the projection is ≈3.8× (finishing Jul 7 against a planned Sep 20), with "paused since 2026-06-25". In 0.3.0 the same product showed 0.4×.
+- The 0.3.0 stall warning is replaced by the pause diagnostic.
+
 ## 0.3.0 (2026-10-08): enterprise reporting
 
 ### New

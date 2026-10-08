@@ -36,7 +36,7 @@ a{color:inherit}td a{font-weight:600}
 img{max-width:100%;height:auto;border-radius:8px;background:#fff;margin:8px 0}
 .warn{border-left:3px solid var(--accent);padding:6px 12px;background:var(--card);margin:6px 0;font-size:14px}
 .badge{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;border:1px solid currentColor}
-.s-ok{color:var(--ok)}.s-no_delivery{color:var(--warn)}.s-no_baseline{color:var(--muted)}.s-error{color:var(--bad)}
+.s-ok{color:var(--ok)}.s-paused{color:var(--warn)}.s-no_delivery{color:var(--warn)}.s-no_baseline{color:var(--muted)}.s-error{color:var(--bad)}
 .funnel div{display:flex;align-items:center;gap:10px;margin:6px 0;font-size:14px}
 .funnel i{display:block;height:18px;background:var(--accent);border-radius:4px;min-width:2px}
 .funnel span{width:230px;flex:none;color:var(--muted)}
@@ -56,7 +56,7 @@ window.addEventListener('hashchange',()=>show(location.hash.slice(1)));
 show(location.hash.slice(1)||'enterprise');
 """
 
-STATUS = {"ok": "measured", "no_delivery": "baselined, nothing delivered yet",
+STATUS = {"ok": "measured", "paused": "paused", "no_delivery": "baselined, nothing delivered yet",
           "no_baseline": "no baseline yet", "error": "error"}
 
 
@@ -86,7 +86,8 @@ def _tiles(tiles) -> str:
 
 
 def _badge(r) -> str:
-    return f'<span class="badge s-{r.status}">{escape(STATUS.get(r.status, r.status))}</span>'
+    text = f"paused since {r.paused_since}" if r.status == "paused" else STATUS.get(r.status, r.status)
+    return f'<span class="badge s-{r.status}">{escape(text)}</span>'
 
 
 # ------------------------------------------------------------------ enterprise view
@@ -108,10 +109,12 @@ def _enterprise(runs, out: Path) -> str:
                 f"<b>{s['delivering']}</b> are delivering against a frozen baseline. Their delivered scope landed a median "
                 f"<b>{s['median_x']:.1f}×</b> faster in calendar time than planned{spread}, with a median "
                 f"{_pct(s['median_delivered_share'])} of the baseline delivered and {_pct(s['median_agentic_share'])} of it agentic.")
+        if s["paused"]:
+            lead += f" {s['paused']} of them {'is' if s['paused'] == 1 else 'are'} paused; their clocks stopped at the last build."
         if s["median_weeks_forward"] is not None:
             w = s["median_weeks_forward"]
-            lead += (f" At the pace so far, the median product finishes its baseline <b>{_wk(w)}</b> against plan (projection,"
-                     " measured over all elapsed time, so stalls count).")
+            lead += (f" At the pace so far, the median product finishes its baseline <b>{_wk(w)}</b> against plan "
+                     "(projection, measured over active time: paused tails are not counted).")
     else:
         lead = f"{s['products']} products in scope. None has delivered baseline scope yet."
 
@@ -128,6 +131,10 @@ def _enterprise(runs, out: Path) -> str:
     funnel = '<div class=funnel>' + "".join(
         f'<div><span>{escape(t)}</span><i style="width:{(60 * n / max(s["products"], 1)):.1f}%"></i><b>{n}</b></div>'
         for t, n in stages) + "</div>"
+    if s["paused"]:
+        funnel += (f'<div class=warn>{s["paused"]} of the delivering products are <b>paused</b> (no build for more than '
+                   'the pause threshold). Their clock stopped at the last build, so the idle tail is not measured; '
+                   'their figures are frozen until delivery resumes.</div>')
     if s["errors"]:
         funnel += f'<div class=warn>{s["errors"]} product(s) could not be read; see their status below.</div>'
 
@@ -142,7 +149,7 @@ def _enterprise(runs, out: Path) -> str:
                    "<th class=num>Median % delivered</th><th class=num>Median agentic</th><th class=num>Median vs plan (projected)</th></tr>"
                    f"{grow}</table></div>")
 
-    order = {"ok": 0, "no_delivery": 1, "no_baseline": 2, "error": 3}
+    order = {"ok": 0, "paused": 1, "no_delivery": 2, "no_baseline": 3, "error": 4}
     prow = "".join(
         f'<tr><td><a href="#{slug(r.product)}">{escape(r.product)}</a></td><td>{escape(r.group or "–")}</td>'
         f'<td>{_badge(r)}</td><td class=num>{_pct(enterprise.delivered_share(r))}</td>'
@@ -163,7 +170,8 @@ def _enterprise(runs, out: Path) -> str:
             + (f"<h2>×-speed by product</h2>{_img(out / 'portfolio_compression.png')}" if s["delivering"] > 1 else "")
             + "<h2>How the enterprise numbers are built</h2><p class=muted>Estimates are relative to each team, so no points "
               "are added up across products. Every product counts once, and only unit-free measures are rolled up: ratios "
-              "(×-speed, % delivered, agentic share), counts, and calendar weeks. The trend rebuilds each product's reading "
+              "(×-speed, % delivered, agentic share), counts, and calendar weeks. A product with no build for more than "
+              "the pause threshold (default 14 days) is marked paused, and its clock stops at the last build. The trend rebuilds each product's reading "
               "for every week since its baseline from Azure DevOps history, then takes the median across the products "
               "reporting that week.</p></section>")
 
@@ -208,6 +216,8 @@ def _product(r, items, tz, out: Path) -> str:
         tiles.append(("", _x(r.projected_compression), f"projected, full baseline (ends {r.projected_end})"))
     if enterprise.weeks_pulled_forward(r) is not None:
         tiles.append(("", _wk(enterprise.weeks_pulled_forward(r)), f"projected vs baseline end {r.baseline_end}"))
+    if r.status == "paused":
+        tiles.append(("", f"{r.idle_days} days idle", f"paused since {r.paused_since}; measured to last build {r.last_activity}"))
     excl = {k.replace("_", " "): v for k, v in (r.excluded or {}).items() if v}
     notes = ([f"Excluded from the comparison: " + ", ".join(f"{k} {v:g} {u}" for k, v in excl.items())] if excl else [])
     notes += r.warnings
@@ -231,7 +241,7 @@ def write(runs, out: Path):
         by_group[r.group or "Ungrouped"].append(r)
     opts = '<option value="enterprise">Enterprise overview</option>' + "".join(
         f'<optgroup label="{escape(g)}">' + "".join(
-            f'<option value="{slug(r.product)}">{escape(r.product)}{"" if r.compression else " (" + STATUS.get(r.status, r.status) + ")"}</option>'
+            f'<option value="{slug(r.product)}">{escape(r.product)}{"" if r.status == "ok" else " (" + STATUS.get(r.status, r.status) + ")"}</option>'
             for r in sorted(rs, key=lambda r: r.product.lower())) + "</optgroup>"
         for g, rs in sorted(by_group.items()))
     header = (f'<header><div class=bar><strong>Agentic delivery vs plan <span class=muted>· as of {as_of}</span></strong>'

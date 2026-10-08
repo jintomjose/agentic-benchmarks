@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from .backlog import Item, first_assignment, parse_dt
@@ -35,7 +35,11 @@ class Result:
     velocity: float | None = None
     baseline_end: str | None = None          # compare: end date of the full baseline plan
     group: str | None = None                 # business unit / domain, for enterprise rollups
-    status: str = "ok"                       # ok | no_baseline | no_delivery | error
+    status: str = "ok"                       # ok | paused | no_baseline | no_delivery | error
+    last_activity: str | None = None         # last delivery of any in-scope item (the "last build")
+    idle_days: int | None = None             # days from last_activity to as-of
+    paused_since: str | None = None          # set when idle > pause_after_days with work remaining
+    measured_to: str | None = None           # end of the measured period (as-of, or last build if paused)
     excluded: dict = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
     trend: list[dict] = field(default_factory=list)  # compare: weekly readings since the baseline
@@ -148,11 +152,13 @@ def compare(name: str, base: dict, items: list[Item], cfg: dict, at: datetime, u
     _windows(r, cmp, tz, start, start)
 
     # Projection for the whole baseline scope at the pace observed so far.
-    # Pace is measured over all elapsed time up to as-of, so a stalled product projects late.
-    elapsed = _days(start, at.astimezone(tz).date())
-    idle = (at.astimezone(tz).date() - date.fromisoformat(r.actual_end)).days
-    if r.remaining_estimate > 0 and idle > 14:
-        r.warnings.append(f"no baseline item delivered in the last {idle} days; the projection reflects the stall")
+    # Pause diagnostic: the "last build" is the last delivery of any in-scope item, baseline or added.
+    last = max(i.delivered.astimezone(tz).date() for i in items if i.delivered and i.delivered > base_at)
+    _pause(r, last, at.astimezone(tz).date(), cfg)
+    # Pace is measured up to as-of while the product is active, and up to the last build once it is
+    # paused, so an idle tail is not counted.
+    end = date.fromisoformat(r.measured_to)
+    elapsed = _days(start, end)
     if plan_end and r.remaining_estimate > 0:
         pace = r.delivered_estimate / elapsed
         days_total = round(r.total_estimate / pace)
@@ -161,6 +167,17 @@ def compare(name: str, base: dict, items: list[Item], cfg: dict, at: datetime, u
     elif plan_end:
         r.projected_end, r.projected_compression = r.actual_end, _days(start, plan_end) / r.actual_days
     return r
+
+
+def _pause(r: Result, last: date, today: date, cfg: dict):
+    """Mark the product paused when nothing has been delivered for more than pause_after_days and
+    baseline work remains; the measured period then stops at the last build."""
+    r.last_activity, r.idle_days = last.isoformat(), (today - last).days
+    r.measured_to = today.isoformat()
+    if r.remaining_estimate > 0 and r.idle_days > cfg["pause_after_days"]:
+        r.status, r.paused_since, r.measured_to = "paused", (last + timedelta(days=1)).isoformat(), last.isoformat()
+        r.warnings.append(f"paused: no build for {r.idle_days} days (last build {last}); the clock stopped at the "
+                          f"last build and the idle tail is not measured")
 
 
 # ------------------------------------------------------------------ retro
@@ -210,6 +227,7 @@ def retro(name: str, items: list[Item], histories: dict, sprints: dict, cfg: dic
     a0 = run_start or min(i.delivered.astimezone(tz).date() for i in cmp)
     p0 = a0 if cfg["plan_clock"] == "run_start" and run_start else min(i.planned_start for i in cmp)
     _windows(r, cmp, tz, a0, p0)
+    _pause(r, max(i.delivered.astimezone(tz).date() for i in done), at.astimezone(tz).date(), cfg)
     return r
 
 

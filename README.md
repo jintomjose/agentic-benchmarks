@@ -79,17 +79,17 @@ flowchart LR
 | Planned window / actual window | baseline (or run start) → latest planned sprint end of the delivered items / → last delivery |
 | % of baseline delivered | delivered baseline estimate ÷ total baseline estimate |
 | Agentic share | share of delivered estimate matching `agentic_rule` (tag, area path or field) |
-| **Projected ×-speed** and projected end | full baseline scope at the pace so far. Pace is measured over *all elapsed time*, so stalls count |
+| **Projected ×-speed** and projected end | full baseline scope at the pace so far, measured over active time: up to as-of, or up to the last build if the product is paused |
 | Weeks vs plan (projected) | baseline end date − projected end date |
 | Sprint table | per planned sprint: planned done-by, actually done-by, days early, agentic share |
 | Trend | the measures above, week by week since the baseline |
-| Stall warning | no baseline item delivered for more than 14 days |
+| **Pause diagnostic** | no build (delivery of any in-scope item) for more than `pause_after_days` (default 14) while baseline work remains: the product is marked *paused since <date>*, its clock stops at the last build, and the idle tail is not measured |
 
 **Measures for the enterprise** (one vote per product, only unit-free measures, never summed points)
 
 | Measure | Definition |
 |---|---|
-| Adoption funnel | onboarded → baseline frozen → delivering → ≥ 50% of baseline delivered |
+| Adoption funnel | onboarded → baseline frozen → delivering → ≥ 50% of baseline delivered, with the number of paused products |
 | Median ×-speed and spread | median across delivering products, with the middle half (≥ 4 products) or the range |
 | Median % delivered, median agentic share, median projected ×, median weeks vs plan | the medians across products |
 | Business-unit rollup | all of the above per `group` |
@@ -160,6 +160,7 @@ Settings go in a team repo's `.agentic-benchmark.toml` (one `[product]` block) o
 | `velocity`, `velocity_sprints` | `auto` = average of the last N finished sprints, or a fixed number | `auto`, 3 |
 | `run_start` | Day the agentic SDLC started; picks the baseline and starts both clocks | – |
 | `baseline` | Pin a specific baseline file | latest baseline on or before `run_start`, else the earliest |
+| `pause_after_days` | No build for longer than this = paused; the clock stops at the last build | 14 |
 | `group` | Business unit or domain, used for the enterprise rollup and to group products in the report's selector | – |
 | `include_titles` | Set to `false` to drop work item titles from the outputs | `true` |
 | `timezone` | Used to turn timestamps into calendar days | Europe/Amsterdam |

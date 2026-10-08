@@ -1,2 +1,2 @@
 """Plan vs agentic delivery benchmark for Azure DevOps backlogs."""
-__version__ = "0.3.0"
+__version__ = "0.4.0"

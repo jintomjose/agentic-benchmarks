@@ -33,6 +33,7 @@ DEFAULTS = {
     "run_start": None,
     "as_of": None,
     "plan_clock": "run_start",
+    "pause_after_days": 14,         # no build for longer than this = paused; clock stops at the last build
     "backfill_minutes": 60,
     "exclude_backfilled": True,
     "include_titles": True,

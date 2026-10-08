@@ -50,14 +50,15 @@ agentic-benchmark discover|baseline|compare|retro --help
 | Velocity | mean delivered estimate over the last N finished team sprints (backfilled items excluded), or a fixed value |
 | % delivered | delivered baseline estimate ÷ total baseline estimate |
 | Agentic share | delivered estimate matching `agentic_rule`, evaluated at as-of |
-| Projection | total ÷ (delivered ÷ **elapsed days to as-of**). Stalls must make it worse. Warning after 14 idle days |
+| Pause diagnostic | last build = last delivery of any in-scope item after the baseline. Idle > `pause_after_days` (14) with work remaining → `status = paused`, `paused_since`, `measured_to = last build` |
+| Projection | total ÷ (delivered ÷ days of the measured period). The measured period ends at as-of, or at the **last build when paused**, so the idle tail is not counted |
 | Weeks vs plan | (baseline end − projected end) ÷ 7 |
 
 **Enterprise**
 
 | Measure | Definition |
 |---|---|
-| Funnel | onboarded → baselined → delivering → ≥ 50% delivered |
+| Funnel | onboarded → baselined → delivering → ≥ 50% delivered, plus a paused count |
 | Medians | ×-speed (with middle half or range), % delivered, agentic share, projected ×, weeks vs plan |
 | Rollup | the same per `group` |
 | Trend | per ISO week, the median of each product's latest reading, with `n` |
@@ -72,6 +73,7 @@ agentic-benchmark discover|baseline|compare|retro --help
 6. **Never silently tune numbers.** Every exclusion goes into `Result.excluded` or `warnings` and shows in the report.
 7. **Caveats ship with every report:** plan vs actual (not a controlled experiment), calendar time (not labour hours), and so on.
 8. **One product's failure never stops an enterprise run.**
+9. **Paused is always visible.** Stopping the clock at the last build must come with a `paused since` badge, a warning and the funnel count. Never drop or hide a paused product.
 
 ## Conventions
 

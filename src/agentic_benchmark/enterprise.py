@@ -42,6 +42,7 @@ def stats(results: list[Result]) -> dict:
         "baselined": len(measured),
         "delivering": len(delivering),
         "half_delivered": sum(1 for r in measured if (delivered_share(r) or 0) >= .5),
+        "paused": sum(1 for r in results if r.status == "paused"),
         "no_baseline": sum(1 for r in results if r.status == "no_baseline"),
         "errors": sum(1 for r in results if r.status == "error"),
         "median_x": _med(xs), "x_p25": lo, "x_p75": hi,

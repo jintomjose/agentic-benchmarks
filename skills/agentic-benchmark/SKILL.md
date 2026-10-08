@@ -31,6 +31,7 @@ You drive the `agentic-benchmark` CLI (`pip install` from this repo). It is read
   4. Agentic share of the delivered work.
   5. Every warning.
 - Below ~25% of the baseline delivered, lead with the projection and call the number early.
+- If the product is **paused** (no build for more than 14 days), say so first: give the paused-since date and the last build. Explain that the clock stopped at the last build, so the figures are frozen, not finished.
 
 ## 4. Writing it up
 Always include, in plain words:

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentic-benchmark"
-version = "0.3.0"
+version = "0.4.0"
 description = "Compare a product's planned delivery (ADO estimates and sprints) with its agentic delivery: calendar ×-speed"
 readme = "README.md"
 requires-python = ">=3.11"

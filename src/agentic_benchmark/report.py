@@ -166,8 +166,13 @@ def print_result(r: Result, note: str = ""):
             print(f"  Calendar compression ≈{r.compression:.1f}×")
         if r.projected_compression:
             print(f"  Projection, full baseline scope at current pace: ends {r.projected_end}, ≈{r.projected_compression:.1f}×")
+        if r.last_activity:
+            state = (f"PAUSED since {r.paused_since}: clock stopped at last build {r.last_activity}" if r.status == "paused"
+                     else f"active: last build {r.last_activity}")
+            print(f"  Pause diagnostic: {state} ({r.idle_days} days ago); measured to {r.measured_to}")
     for w in r.warnings:
-        print(f"  ! {w}")
+        if not w.startswith("paused:"):
+            print(f"  ! {w}")
 
 
 def timeline(r: Result, items: list[Item], tz: ZoneInfo, path: Path):
